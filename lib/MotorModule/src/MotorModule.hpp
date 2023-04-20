@@ -1,8 +1,8 @@
-#ifndef CAN_COM_H
-#define CAN_COM_H
+#ifndef MOTOR_MODULE_HPP
+#define MOTOR_MODULE_HPP
 
-#include "mbed.h"
-#include "../math_ops.h"
+#include "../../MathOps/src/MathOps.hpp"
+#include <mcp_can.h>
 
 /// Value Limits ///
 #define P_MIN -95.5f        // Radians
@@ -35,14 +35,14 @@ typedef struct
 {
     StateStruct state;
     ControlStruct control;
-    CANMessage rxMsg;
-    CANMessage txMsg;
+    byte rxMsg[6];
+    byte txMsg[8];
 }MotorStruct;
 
 void pack_cmd(MotorStruct * motor);
 void unpack_reply(MotorStruct * motor);
-void enable_motor(MotorStruct * motor, CAN * can);
-void disable_motor(MotorStruct * motor, CAN * can);
+void enable_motor(MotorStruct * motor, MCP_CAN can);
+void disable_motor(MotorStruct * motor, MCP_CAN can);
 
 
-#endif // CAN_COM_H
+#endif // MOTOR_MODULE_HPP

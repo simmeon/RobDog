@@ -1,4 +1,4 @@
-#include "MotorModule.h"
+#include "MotorModule.hpp"
 
 
 /// CAN Command Packet Structure ///
@@ -31,15 +31,15 @@ void pack_cmd(MotorStruct * motor){
      int kp_int = float_to_uint(motor->control.kp, KP_MIN, KP_MAX, 12);
      int kd_int = float_to_uint(motor->control.kd, KD_MIN, KD_MAX, 12);
      int t_int = float_to_uint(motor->control.i_ff, I_MIN, I_MAX, 12);
-     /// pack ints into the can buffer ///
-     motor->txMsg.data[0] = p_int>>8;                                       
-     motor->txMsg.data[1] = p_int&0xFF;
-     motor->txMsg.data[2] = v_int>>4;
-     motor->txMsg.data[3] = ((v_int&0xF)<<4)|(kp_int>>8);
-     motor->txMsg.data[4] = kp_int&0xFF;
-     motor->txMsg.data[5] = kd_int>>4;
-     motor->txMsg.data[6] = ((kd_int&0xF)<<4)|(t_int>>8);
-     motor->txMsg.data[7] = t_int&0xff;
+     /// pack ints into the tx buffer ///
+     motor->txMsg[0] = p_int>>8;                                       
+     motor->txMsg[1] = p_int&0xFF;
+     motor->txMsg[2] = v_int>>4;
+     motor->txMsg[3] = ((v_int&0xF)<<4)|(kp_int>>8);
+     motor->txMsg[4] = kp_int&0xFF;
+     motor->txMsg[5] = kd_int>>4;
+     motor->txMsg[6] = ((kd_int&0xF)<<4)|(t_int>>8);
+     motor->txMsg[7] = t_int&0xff;
      }
      
 /// CAN Reply Packet Structure ///
@@ -56,10 +56,10 @@ void pack_cmd(MotorStruct * motor){
 
 void unpack_reply(MotorStruct * motor){
     /// unpack ints from can buffer ///
-    int id = motor->rxMsg.data[0];
-    int p_int = (motor->rxMsg.data[1]<<8)|motor->rxMsg.data[2];
-    int v_int = (motor->rxMsg.data[3]<<4)|(motor->rxMsg.data[4]>>4);
-    int i_int = ((motor->rxMsg.data[4]&0xF)<<8)|motor->rxMsg.data[5];
+    int id = motor->rxMsg[0];
+    int p_int = (motor->rxMsg[1]<<8)|motor->rxMsg[2];
+    int v_int = (motor->rxMsg[3]<<4)|(motor->rxMsg[4]>>4);
+    int i_int = ((motor->rxMsg[4]&0xF)<<8)|motor->rxMsg[5];
     /// convert unsigned ints to floats ///
     float p = uint_to_float(p_int, P_MIN, P_MAX, 16);
     float v = uint_to_float(v_int, V_MIN, V_MAX, 12);
@@ -71,27 +71,27 @@ void unpack_reply(MotorStruct * motor){
     } 
     
 
-void enable_motor(MotorStruct * motor, CAN * can)
+void enable_motor(MotorStruct * motor, MCP_CAN can)
 {
-    motor->txMsg.data[0] = 0xFF;
-    motor->txMsg.data[1] = 0xFF;
-    motor->txMsg.data[2] = 0xFF;
-    motor->txMsg.data[3] = 0xFF;
-    motor->txMsg.data[4] = 0xFF;
-    motor->txMsg.data[5] = 0xFF;
-    motor->txMsg.data[6] = 0xFF;
-    motor->txMsg.data[7] = 0xFC;  
-    can->write(motor->txMsg); 
+    motor->txMsg[0] = 0xFF;
+    motor->txMsg[1] = 0xFF;
+    motor->txMsg[2] = 0xFF;
+    motor->txMsg[3] = 0xFF;
+    motor->txMsg[4] = 0xFF;
+    motor->txMsg[5] = 0xFF;
+    motor->txMsg[6] = 0xFF;
+    motor->txMsg[7] = 0xFC;
+    can.sendMsgBuf(0x0, 0, 8, motor->txMsg); // ID, Standard CAN frame, 8 bytes, data
 }
-void disable_motor(MotorStruct * motor, CAN * can)
+void disable_motor(MotorStruct * motor, MCP_CAN can)
 {
-    motor->txMsg.data[0] = 0xFF;
-    motor->txMsg.data[1] = 0xFF;
-    motor->txMsg.data[2] = 0xFF;
-    motor->txMsg.data[3] = 0xFF;
-    motor->txMsg.data[4] = 0xFF;
-    motor->txMsg.data[5] = 0xFF;
-    motor->txMsg.data[6] = 0xFF;
-    motor->txMsg.data[7] = 0xFD;  
-    can->write(motor->txMsg); 
+    motor->txMsg[0] = 0xFF;
+    motor->txMsg[1] = 0xFF;
+    motor->txMsg[2] = 0xFF;
+    motor->txMsg[3] = 0xFF;
+    motor->txMsg[4] = 0xFF;
+    motor->txMsg[5] = 0xFF;
+    motor->txMsg[6] = 0xFF;
+    motor->txMsg[7] = 0xFD;  
+    can.sendMsgBuf(0x0, 0, 8, motor->txMsg);
 }
