@@ -81,7 +81,11 @@ void enable_motor(MotorStruct * motor, MCP_CAN can)
     motor->txMsg[5] = 0xFF;
     motor->txMsg[6] = 0xFF;
     motor->txMsg[7] = 0xFC;
-    can.sendMsgBuf(0x0, 0, 8, motor->txMsg); // ID, Standard CAN frame, 8 bytes, data
+
+    int check = can.sendMsgBuf(0x0, 0, 8, motor->txMsg); // ID, Standard CAN frame, 8 bytes, data
+    if (check == CAN_OK) {
+        Serial.println("Motor enabled");
+    }
 }
 void disable_motor(MotorStruct * motor, MCP_CAN can)
 {
