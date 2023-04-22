@@ -71,7 +71,7 @@ void unpack_reply(MotorStruct * motor){
     } 
     
 
-void enable_motor(MotorStruct * motor, MCP_CAN can)
+void enable_motor(MotorStruct * motor, MCP2515 can)
 {
     motor->txMsg[0] = 0xFF;
     motor->txMsg[1] = 0xFF;
@@ -82,12 +82,13 @@ void enable_motor(MotorStruct * motor, MCP_CAN can)
     motor->txMsg[6] = 0xFF;
     motor->txMsg[7] = 0xFC;
 
-    int check = can.sendMsgBuf(0x0, 0, 8, motor->txMsg); // ID, Standard CAN frame, 8 bytes, data
-    if (check == CAN_OK) {
-        Serial.println("Motor enabled");
-    }
+    can_frame frame;
+    frame.can_id = 0x00;
+    frame.can_dlc = 8;
+
+    can.sendMessage(&frame);
 }
-void disable_motor(MotorStruct * motor, MCP_CAN can)
+void disable_motor(MotorStruct * motor, MCP2515 can)
 {
     motor->txMsg[0] = 0xFF;
     motor->txMsg[1] = 0xFF;
@@ -96,6 +97,15 @@ void disable_motor(MotorStruct * motor, MCP_CAN can)
     motor->txMsg[4] = 0xFF;
     motor->txMsg[5] = 0xFF;
     motor->txMsg[6] = 0xFF;
-    motor->txMsg[7] = 0xFD;  
-    can.sendMsgBuf(0x0, 0, 8, motor->txMsg);
+    motor->txMsg[7] = 0xFD;
+
+    can_frame frame;
+    frame.can_id = 0x00;
+    frame.can_dlc = 8;
+    
+    for (int i = 0; i < 8; i++) {
+        frame.data[i] = motor->txMsg[i];
+    }
+
+    can.sendMessage(&frame);
 }

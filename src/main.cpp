@@ -1,52 +1,85 @@
 #include <Arduino.h>
-#include <mcp_can.h>
 #include <SPI.h>
 #include <MotorModule.hpp>
+#include <mcp2515.h>
 
 
-#define CAN0_INT 42  // Set CAN INT pin
+#define CAN0_INT 3  // Set CAN INT pin
 
-MCP_CAN CAN0(53);     // Create CAN object and set its CS pin
+MCP2515 CAN0(53);
+can_frame frame;
+can_frame rx_frame;
+
 long unsigned int rxId;
 unsigned char len = 0;
 
 MotorStruct motor;
 
+volatile bool interrupt = false;
+
+void irqHandler() {
+    interrupt = true;
+}
+
+
 void setup()
 {
   Serial.begin(9600);
 
-  // Initialize MCP2515 running at 16MHz with a baudrate of 1000kb/s and the masks and filters disabled.
-  if(CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK) {
-    Serial.println("MCP2515 Initialized Successfully!");
-  } else {
-    Serial.println("Error Initializing MCP2515...");
-    while(1);
-  }
+  // Initialise CAN
+  CAN0.reset();
+  CAN0.setBitrate(CAN_1000KBPS, MCP_8MHZ);
+  CAN0.setNormalMode();
 
-  CAN0.setMode(MCP_NORMAL);   // Change to normal mode to allow messages to be transmitted
+  frame.can_id = 0x00;
+  frame.can_dlc = 8;
 
   pinMode(CAN0_INT, INPUT);   // Set interrupt pin to be an input
 
   enable_motor(&motor, CAN0);     // Go into motor mode
 
+  attachInterrupt(digitalPinToInterrupt(CAN0_INT), irqHandler, FALLING);
+
 }
 
 void loop() {
 
-  if(!digitalRead(CAN0_INT))                      // If CAN0_INT pin is low, read receive buffer
-  {
-    Serial.println("Rx");
-    CAN0.readMsgBuf(&rxId, &len, motor.rxMsg);    // Read data: len = data length, buf = data byte(s)
-    unpack_reply(&motor);
-    Serial.print("Position: ");
-    Serial.println(motor.state.position);
+  // motor.control.p_des = 3;
+  // motor.control.kp = 20;
+  // motor.control.kd = 2;
+  // motor.control.v_des = 2;
+  // motor.control.i_ff = 0;
+  // motor.control.id = 0;
+  // pack_cmd(&motor);
+
+  enable_motor(&motor,CAN0);
+
+  // Add data to CAN frame to be sent
+  for (int i = 0; i < 8; i++) {
+    frame.data[i] = motor.txMsg[i];
+    // Serial.print(frame.data[i], BIN);
+    // Serial.print("  ");
+    // Serial.println(motor.txMsg[i], BIN);
   }
 
-  motor.control.p_des = 3;
-  motor.control.kp = 20;
-  pack_cmd(&motor);
-  byte sndStat = CAN0.sendMsgBuf(0x0, 0, 8, motor.txMsg);
+  CAN0.sendMessage(&frame);
+
+  if (interrupt) {
+    interrupt = false;
+
+    if (CAN0.readMessage(&rx_frame) == MCP2515::ERROR_OK) {
+      motor.state.id = rx_frame.can_id;
+      for (int i = 0; i < 6; i++) {
+        motor.rxMsg[i] = rx_frame.data[i];
+      }
+      unpack_reply(&motor);
+      Serial.println(motor.state.position);
+    }
+  }
+
+  delay(1);
+
+  // byte sndStat = CAN0.sendMsgBuf(0x0, 0, 8, motor.txMsg);
 
   // if(sndStat == CAN_OK){
   //   Serial.println("Message Sent Successfully!");
