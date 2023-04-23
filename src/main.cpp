@@ -21,6 +21,15 @@ void irqHandler() {
     interrupt = true;
 }
 
+void init_motor(MotorStruct motor) {
+  motor.control.i_ff = 0;
+  motor.control.id = 0;
+  motor.control.kd = 0;
+  motor.control.kp = 0;
+  motor.control.p_des = 0;
+  motor.control.v_des = 0;
+}
+
 
 void setup()
 {
@@ -36,6 +45,7 @@ void setup()
 
   pinMode(CAN0_INT, INPUT);   // Set interrupt pin to be an input
 
+  init_motor(motor);
   enable_motor(&motor, CAN0);     // Go into motor mode
 
   attachInterrupt(digitalPinToInterrupt(CAN0_INT), irqHandler, FALLING);
@@ -46,15 +56,18 @@ void setup()
 void loop() {
 
 
-  // // Add data to CAN frame to be sent
-  // for (int i = 0; i < 8; i++) {
-  //   frame.data[i] = motor.txMsg[i];
-  //   // Serial.print(frame.data[i], BIN);
-  //   // Serial.print("  ");
-  //   // Serial.println(motor.txMsg[i], BIN);
-  // }
+  // Add data to CAN frame to be sent
+  for (int i = 0; i < 8; i++) {
+    //frame.data[i] = motor.txMsg[i];
+    frame.data[i] = 0xFF * (i % 2);
+    // Serial.print(frame.data[i], HEX);
+    // Serial.print("  ");
+    // Serial.println(motor.txMsg[i], BIN);
+  }
 
   // CAN0.sendMessage(&frame);
+
+  enable_motor(&motor, CAN0);
 
   if (interrupt) {
     interrupt = false;
